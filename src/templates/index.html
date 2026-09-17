@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Parksby | Smart Parking Management</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-icon">P</div>
+
+            <div>
+                <h1>Parksby</h1>
+                <p>Smart Parking Management System</p>
+            </div>
+        </div>
+
+        <div class="status">
+            <span class="status-dot"></span>
+            System Online
+        </div>
+    </header>
+
+
+    <main class="container">
+
+        <section class="hero">
+            <div>
+                <p class="eyebrow">PARKING MANAGEMENT</p>
+
+                <h2>
+                    Park. Pay. Go.
+                </h2>
+
+                <p>
+                    Manage vehicle entry, parking slots and vehicle
+                    exit from one place.
+                </p>
+            </div>
+
+            <div class="capacity-card">
+                <span>Available Slots</span>
+                <strong>{{ available_count }}</strong>
+                <small>out of 10</small>
+            </div>
+        </section>
+
+
+        {% if error %}
+        <div class="message error">
+            <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+
+        {% if entry_result %}
+        <div class="message {% if entry_result.success %}success{% else %}error{% endif %}">
+
+            {% if entry_result.success %}
+
+            <strong>Vehicle Entry Successful</strong>
+
+            <div class="result-grid">
+                <div>
+                    <span>Ticket</span>
+                    <strong>{{ entry_result.ticket_id }}</strong>
+                </div>
+
+                <div>
+                    <span>Vehicle</span>
+                    <strong>{{ entry_result.plate_number }}</strong>
+                </div>
+
+                <div>
+                    <span>Slot</span>
+                    <strong>{{ entry_result.slot_number }}</strong>
+                </div>
+
+                <div>
+                    <span>Entry Time</span>
+                    <strong>{{ entry_result.entry_time }}</strong>
+                </div>
+            </div>
+
+            {% else %}
+
+            <strong>{{ entry_result.message }}</strong>
+
+            {% endif %}
+
+        </div>
+        {% endif %}
+
+
+        {% if exit_result %}
+        <div class="message {% if exit_result.success %}success{% else %}error{% endif %}">
+
+            {% if exit_result.success %}
+
+            <strong>{{ exit_result.message }}</strong>
+
+            <div class="result-grid">
+
+                <div>
+                    <span>Vehicle</span>
+                    <strong>{{ exit_result.plate_number }}</strong>
+                </div>
+
+                <div>
+                    <span>Ticket</span>
+                    <strong>{{ exit_result.ticket_id }}</strong>
+                </div>
+
+                <div>
+                    <span>Duration</span>
+                    <strong>{{ exit_result.duration_minutes }} minutes</strong>
+                </div>
+
+                <div>
+                    <span>Amount Paid</span>
+                    <strong>KES {{ exit_result.fee }}</strong>
+                </div>
+
+                <div>
+                    <span>Payment Method</span>
+                    <strong>{{ exit_result.payment_method }}</strong>
+                </div>
+
+                <div>
+                    <span>Payment Reference</span>
+                    <strong>{{ exit_result.payment_reference }}</strong>
+                </div>
+
+            </div>
+
+            {% else %}
+
+            <strong>{{ exit_result.message }}</strong>
+
+            {% if exit_result.fee is defined %}
+            <p>Amount due: <strong>KES {{ exit_result.fee }}</strong></p>
+            {% endif %}
+
+            {% endif %}
+
+        </div>
+        {% endif %}
+
+
+        <section class="actions">
+
+            <div class="panel">
+
+                <div class="panel-heading">
+                    <div class="panel-icon">↓</div>
+
+                    <div>
+                        <h3>Vehicle Entry</h3>
+                        <p>Register a vehicle and assign a parking slot.</p>
+                    </div>
+                </div>
+
+
+                <form action="/entry" method="POST">
+
+                    <label for="plate_number">
+                        Vehicle Plate Number
+                    </label>
+
+                    <input
+                        type="text"
+                        id="plate_number"
+                        name="plate_number"
+                        placeholder="e.g. KDA123A"
+                        maxlength="20"
+                        required
+                    >
+
+
+                    <label for="vehicle_type">
+                        Vehicle Type
+                    </label>
+
+                    <select
+                        id="vehicle_type"
+                        name="vehicle_type"
+                        required
+                    >
+                        <option value="">Select vehicle type</option>
+                        <option value="CAR">Car</option>
+                        <option value="SUV">SUV</option>
+                        <option value="MOTORCYCLE">Motorcycle</option>
+                        <option value="VAN">Van</option>
+                        <option value="TRUCK">Truck</option>
+                    </select>
+
+
+                    <button type="submit">
+                        Assign Parking Slot
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <div class="panel">
+
+                <div class="panel-heading">
+                    <div class="panel-icon">↑</div>
+
+                    <div>
+                        <h3>Vehicle Exit</h3>
+                        <p>Calculate fees and process vehicle payment.</p>
+                    </div>
+                </div>
+
+
+                <form action="/exit" method="POST">
+
+                    <label for="identifier">
+                        Plate Number or Ticket ID
+                    </label>
+
+                    <input
+                        type="text"
+                        id="identifier"
+                        name="identifier"
+                        placeholder="e.g. KDA123A or PK-XXXXXXXX"
+                        required
+                    >
+
+
+                    <label for="payment_method">
+                        Payment Method
+                    </label>
+
+                    <select
+                        id="payment_method"
+                        name="payment_method"
+                        required
+                    >
+                        <option value="">Select payment method</option>
+                        <option value="MPESA">M-Pesa</option>
+                        <option value="CASH">Cash</option>
+                        <option value="CARD">Card</option>
+                    </select>
+
+
+                    <button type="submit">
+                        Process Exit
+                    </button>
+
+                </form>
+
+            </div>
+
+        </section>
+
+
+        <section class="parking-section">
+
+            <div class="section-heading">
+
+                <div>
+                    <p class="eyebrow">LIVE STATUS</p>
+                    <h2>Parking Slots</h2>
+                </div>
+
+                <div class="legend">
+
+                    <span>
+                        <i class="available-dot"></i>
+                        Available
+                    </span>
+
+                    <span>
+                        <i class="occupied-dot"></i>
+                        Occupied
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="slot-grid">
+
+                {% for slot_number in range(1, 11) %}
+
+                    {% set slot_id = "P%02d" | format(slot_number) %}
+
+                    {% set occupied = namespace(value=false) %}
+
+                    {% for slot in available_slots %}
+
+                        {% if slot["slot_number"] == slot_id %}
+                            {% set occupied.value = false %}
+                        {% endif %}
+
+                    {% endfor %}
+
+
+                    {% if slot_id not in available_slots | map(attribute="slot_number") | list %}
+                        {% set occupied.value = true %}
+                    {% endif %}
+
+
+                    <div class="slot {% if occupied.value %}occupied{% else %}available{% endif %}">
+
+                        <div class="slot-number">
+                            {{ slot_id }}
+                        </div>
+
+                        <div class="slot-status">
+
+                            {% if occupied.value %}
+                                Occupied
+                            {% else %}
+                                Available
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+
+        <section class="tariff">
+
+            <div class="section-heading">
+
+                <div>
+                    <p class="eyebrow">PRICING</p>
+                    <h2>Parking Tariff</h2>
+                </div>
+
+            </div>
+
+
+            <div class="tariff-grid">
+
+                <div>
+                    <span>Up to 30 minutes</span>
+                    <strong>KES 0</strong>
+                </div>
+
+                <div>
+                    <span>30 minutes - 2 hours</span>
+                    <strong>KES 50</strong>
+                </div>
+
+                <div>
+                    <span>2 - 4 hours</span>
+                    <strong>KES 100</strong>
+                </div>
+
+                <div>
+                    <span>4 - 6 hours</span>
+                    <strong>KES 300</strong>
+                </div>
+
+                <div>
+                    <span>Over 6 hours</span>
+                    <strong>KES 500</strong>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <footer>
+    <div class="footer-brand">
+        <strong>Parksby</strong>
+        <span>Smart Parking Management System</span>
+    </div>
+
+    <div class="footer-credit">
+        <p>Developed by <strong>Peace Emmanuel Muthomi</strong></p>
+
+        <p>
+            📞 +254 742 588 363
+            &nbsp;·&nbsp;
+            ✉️ peace.muthomi1@gmail.com
+        </p>
+    </div>
+</footer>
