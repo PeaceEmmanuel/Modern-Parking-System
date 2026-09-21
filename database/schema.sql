@@ -86,3 +86,64 @@ VALUES
     ('P08', 'AVAILABLE'),
     ('P09', 'AVAILABLE'),
     ('P10', 'AVAILABLE');
+
+
+-- ==========================================
+-- PARKING RATES
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS parking_rates (
+    rate_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rate_name VARCHAR(100) NOT NULL,
+    minimum_minutes INTEGER NOT NULL,
+    maximum_minutes INTEGER,
+    amount DECIMAL(10,2) NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1
+        CHECK (active IN (0, 1)),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- ==========================================
+-- DEFAULT PARKING RATES
+-- ==========================================
+
+INSERT INTO parking_rates
+    (rate_name, minimum_minutes, maximum_minutes, amount)
+SELECT 'Free grace period', 0, 30, 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM parking_rates
+);
+
+INSERT INTO parking_rates
+    (rate_name, minimum_minutes, maximum_minutes, amount)
+SELECT 'Up to 2 hours', 31, 120, 50
+WHERE NOT EXISTS (
+    SELECT 1 FROM parking_rates
+    WHERE rate_name = 'Up to 2 hours'
+);
+
+INSERT INTO parking_rates
+    (rate_name, minimum_minutes, maximum_minutes, amount)
+SELECT 'Up to 4 hours', 121, 240, 100
+WHERE NOT EXISTS (
+    SELECT 1 FROM parking_rates
+    WHERE rate_name = 'Up to 4 hours'
+);
+
+INSERT INTO parking_rates
+    (rate_name, minimum_minutes, maximum_minutes, amount)
+SELECT 'Up to 6 hours', 241, 360, 300
+WHERE NOT EXISTS (
+    SELECT 1 FROM parking_rates
+    WHERE rate_name = 'Up to 6 hours'
+);
+
+INSERT INTO parking_rates
+    (rate_name, minimum_minutes, maximum_minutes, amount)
+SELECT 'Above 6 hours', 361, NULL, 500
+WHERE NOT EXISTS (
+    SELECT 1 FROM parking_rates
+    WHERE rate_name = 'Above 6 hours'
+);

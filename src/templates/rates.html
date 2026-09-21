@@ -1,0 +1,87 @@
+{% extends "index.html" %}
+
+{% block content %}
+<main>
+
+    <section class="tariff">
+
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">MANAGEMENT</p>
+
+                <h2>Parking Rate Management</h2>
+
+                <p>
+                    Management can update parking charges
+                    without changing the application software.
+                </p>
+            </div>
+        </div>
+
+
+        {% if error %}
+        <div class="message error">
+            <strong>{{ error }}</strong>
+        </div>
+        {% endif %}
+
+
+        <div class="tariff-grid">
+
+            {% for rate in parking_rates %}
+
+            <div>
+
+                <span>
+                    {{ rate["rate_name"] }}
+                </span>
+
+                <small>
+                    {% if rate["maximum_minutes"] is none %}
+                        {{ rate["minimum_minutes"] }}+ minutes
+                    {% else %}
+                        {{ rate["minimum_minutes"] }}
+                        -
+                        {{ rate["maximum_minutes"] }}
+                        minutes
+                    {% endif %}
+                </small>
+
+
+                <form action="/rates" method="POST">
+
+                    <input
+                        type="hidden"
+                        name="rate_id"
+                        value="{{ rate['rate_id'] }}"
+                    >
+
+                    <label>
+                        Amount (KES)
+                    </label>
+
+                    <input
+                        type="number"
+                        name="amount"
+                        value="{{ rate['amount'] }}"
+                        min="0"
+                        step="0.01"
+                        required
+                    >
+
+                    <button type="submit">
+                        Update Rate
+                    </button>
+
+                </form>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+</main>
+{% endblock %}

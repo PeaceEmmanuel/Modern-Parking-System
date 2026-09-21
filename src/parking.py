@@ -13,6 +13,8 @@ from .models import (
     create_payment
 )
 
+from .database import get_db_connection
+
 
 def generate_ticket_id():
     """Generate a unique parking ticket ID."""
@@ -21,29 +23,68 @@ def generate_ticket_id():
 
 def calculate_fee(duration_minutes):
     """
-    Calculate parking fee according to the assignment tariff.
-
-    Up to 30 minutes       = KES 0
-    More than 30 to 2 hrs  = KES 50
-    More than 2 to 4 hrs   = KES 100
-    More than 4 to 6 hrs   = KES 300
-    More than 6 hrs        = KES 500
+    Calculate the parking fee using active rates
+    stored in the parking_rates database table.
     """
 
-    if duration_minutes <= 30:
+    if duration_minutes < 0:
         return 0
 
-    elif duration_minutes <= 120:
-        return 50
+    db = get_db_connection()
 
-    elif duration_minutes <= 240:
-        return 100
+    try:
+        rate = db.execute(
+            """
+            SELECT amount
+            FROM parking_rates
+            WHERE active = 1
+              AND minimum_minutes <= ?
+              AND (
+                    maximum_minutes IS NULL
+                    OR maximum_minutes >= ?
+                  )
+            ORDER BY minimum_minutes DESC
+            LIMIT 1
+            """,
+            (duration_minutes, duration_minutes)
+        ).fetchone()
 
-    elif duration_minutes <= 360:
-        return 300
+        if rate:
+            return float(rate["amount"])
 
-    else:
-        return 500
+        return 0
+
+    finally:
+        db.close()
+
+
+def get_parking_rates():
+    """Return all active parking rates."""
+
+    db = get_db_connection()
+
+    try:
+        rates = db.execute(
+            """
+            SELECT
+                rate_id,
+                rate_name,
+                minimum_minutes,
+                maximum_minutes,
+                amount,
+                active,
+                created_at,
+                updated_at
+            FROM parking_rates
+            WHERE active = 1
+            ORDER BY minimum_minutes ASC
+            """
+        ).fetchall()
+
+        return rates
+
+    finally:
+        db.close()
 
 
 def vehicle_entry(plate_number, vehicle_type):
@@ -55,14 +96,12 @@ def vehicle_entry(plate_number, vehicle_type):
     and occupies the selected slot.
     """
 
-    # Check whether the vehicle is already parked
     if get_active_vehicle(plate_number):
         return {
             "success": False,
             "message": "Vehicle is already parked."
         }
 
-    # Check available parking slots
     slots = get_available_slots()
 
     if not slots:
@@ -71,27 +110,26 @@ def vehicle_entry(plate_number, vehicle_type):
             "message": "Parking is full."
         }
 
-    # Assign the first available slot
     slot = slots[0]
 
-    # Create or retrieve vehicle
     vehicle_id = create_vehicle(
         plate_number,
         vehicle_type
     )
 
-    # Generate a unique ticket
     ticket_id = generate_ticket_id()
 
-    # Create parking record
     record_id = create_parking_record(
         ticket_id,
         vehicle_id,
         slot["slot_id"]
     )
 
-    # Mark parking slot as occupied
     occupy_slot(slot["slot_id"])
+
+    entry_time = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
     return {
         "success": True,
@@ -100,9 +138,7 @@ def vehicle_entry(plate_number, vehicle_type):
         "ticket_id": ticket_id,
         "plate_number": plate_number,
         "slot_number": slot["slot_number"],
-        "entry_time": datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        "entry_time": entry_time
     }
 
 
@@ -131,8 +167,10 @@ def process_payment(amount, payment_method):
     """
     Simulate payment processing.
 
-    The system can later be connected to
-    M-Pesa or another real payment service.
+    Supported methods:
+    - M-Pesa
+    - Card
+    - Cash
     """
 
     if amount < 0:
@@ -145,6 +183,23 @@ def process_payment(amount, payment_method):
         return {
             "success": False,
             "message": "Payment method is required."
+        }
+
+    payment_method = payment_method.strip()
+
+    allowed_methods = {
+        "M-Pesa",
+        "Card",
+        "Cash"
+    }
+
+    if payment_method not in allowed_methods:
+        return {
+            "success": False,
+            "message": (
+                "Invalid payment method. "
+                "Use M-Pesa, Card, or Cash."
+            )
         }
 
     payment_reference = (
@@ -165,9 +220,10 @@ def vehicle_exit(identifier, payment_method):
 
     Payment must succeed before the parking record
     and parking slot are updated.
+
+    The exit barrier opens only after successful payment.
     """
 
-    # Find active parking record
     record = get_parking_record(identifier)
 
     if not record:
@@ -176,36 +232,32 @@ def vehicle_exit(identifier, payment_method):
             "message": "Vehicle or ticket not found."
         }
 
-    # Record exit time
     exit_time = datetime.now().strftime(
         "%Y-%m-%d %H:%M:%S"
     )
 
-    # Calculate parking duration
     duration_minutes = calculate_duration(
         record["entry_time"],
         exit_time
     )
 
-    # Calculate parking fee
     fee = calculate_fee(duration_minutes)
 
-    # Process payment
     payment = process_payment(
         fee,
         payment_method
     )
 
-    # Keep barrier closed if payment fails
     if not payment["success"]:
         return {
             "success": False,
-            "message": "Payment unsuccessful. "
-                       "Barrier remains closed.",
+            "message": (
+                "Payment unsuccessful. "
+                "Barrier remains closed."
+            ),
             "fee": fee
         }
 
-    # Record successful payment
     create_payment(
         record["record_id"],
         fee,
@@ -214,7 +266,6 @@ def vehicle_exit(identifier, payment_method):
         "PAID"
     )
 
-    # Complete parking record
     complete_parking_record(
         record["record_id"],
         exit_time,
@@ -222,13 +273,14 @@ def vehicle_exit(identifier, payment_method):
         fee
     )
 
-    # Release the parking slot
     release_slot(record["slot_id"])
 
     return {
         "success": True,
-        "message": "Payment successful. "
-                   "Exit barrier opened.",
+        "message": (
+            "Payment successful. "
+            "Exit barrier opened."
+        ),
         "plate_number": record["plate_number"],
         "ticket_id": record["ticket_id"],
         "slot_number": record["slot_number"],
