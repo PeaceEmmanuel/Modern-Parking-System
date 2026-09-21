@@ -116,6 +116,61 @@ def create_parking_record(ticket_id, vehicle_id, slot_id):
     return record_id
 
 
+def create_parking_slot():
+    """
+    Create the next available parking slot.
+
+    Slot numbers are generated automatically:
+    P01, P02, P03, ... P10, P11, P12, etc.
+    """
+
+    db = get_db_connection()
+
+    try:
+        result = db.execute(
+            """
+            SELECT
+                MAX(
+                    CAST(
+                        SUBSTR(slot_number, 2)
+                        AS INTEGER
+                    )
+                ) AS maximum_number
+            FROM parking_slots
+            WHERE slot_number LIKE 'P%'
+            """
+        ).fetchone()
+
+        maximum_number = result["maximum_number"]
+
+        if maximum_number is None:
+            next_number = 1
+        else:
+            next_number = maximum_number + 1
+
+        slot_number = f"P{next_number:02d}"
+
+        cursor = db.execute(
+            """
+            INSERT INTO parking_slots
+                (slot_number, status)
+            VALUES (?, 'AVAILABLE')
+            """,
+            (slot_number,)
+        )
+
+        db.commit()
+
+        return {
+            "success": True,
+            "slot_id": cursor.lastrowid,
+            "slot_number": slot_number
+        }
+
+    finally:
+        db.close()
+
+
 def occupy_slot(slot_id):
     """Mark a parking slot as occupied."""
 

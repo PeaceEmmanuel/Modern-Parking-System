@@ -419,15 +419,10 @@
                 {% set slot_id = "P%02d" | format(slot_number) %}
 
                 {% if slot_id not in available_slots | map(attribute="slot_number") | list %}
-
                     {% set occupied = true %}
-
                 {% else %}
-
                     {% set occupied = false %}
-
                 {% endif %}
-
 
                 <div class="slot {% if occupied %}occupied{% else %}available{% endif %}">
 
@@ -436,13 +431,11 @@
                     </div>
 
                     <div class="slot-status">
-
                         {% if occupied %}
                             Occupied
                         {% else %}
                             Available
                         {% endif %}
-
                     </div>
 
                 </div>
