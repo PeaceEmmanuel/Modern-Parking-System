@@ -5,7 +5,8 @@ from .models import (
     get_payment_summary,
     get_payment_history,
     get_daily_collection_summary,
-    create_parking_slot
+    create_parking_slot,
+    get_parked_vehicles
 )
 
 from .parking import (
@@ -25,12 +26,14 @@ def render_page(template="index.html", **kwargs):
 
     available_slots = get_available_slots()
     parking_rates = get_parking_rates()
+    parked_vehicles = get_parked_vehicles()
 
     return render_template(
         template,
         available_slots=available_slots,
         available_count=len(available_slots),
         parking_rates=parking_rates,
+        parked_vehicles=parked_vehicles,
         **kwargs
     )
 

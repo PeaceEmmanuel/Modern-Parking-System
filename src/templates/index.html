@@ -323,6 +323,27 @@
 
             <form action="/exit" method="POST">
 
+                <label for="parked_vehicle">
+                    Select Parked Vehicle
+                </label>
+
+                <select
+                    id="parked_vehicle"
+                    onchange="selectParkedVehicle(this)"
+                >
+                    <option value="">
+                        Select a parked vehicle
+                    </option>
+
+                    {% for vehicle in parked_vehicles %}
+                    <option value="{{ vehicle['plate_number'] }}">
+                        {{ vehicle['plate_number'] }}
+                        — {{ vehicle['slot_number'] }}
+                        — {{ vehicle['ticket_id'] }}
+                    </option>
+                    {% endfor %}
+                </select>
+
                 <label for="identifier">
                     Plate Number or Ticket ID
                 </label>
@@ -528,6 +549,16 @@
 
 </footer>
 
+
+    <script>
+        function selectParkedVehicle(select) {
+            const identifier = document.getElementById("identifier");
+
+            if (select.value) {
+                identifier.value = select.value;
+            }
+        }
+    </script>
 
 </body>
 

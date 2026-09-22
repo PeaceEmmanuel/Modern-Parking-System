@@ -187,6 +187,32 @@ def occupy_slot(slot_id):
     db.close()
 
 
+def get_parked_vehicles():
+    """Return all vehicles currently parked."""
+
+    db = get_db_connection()
+
+    vehicles = db.execute("""
+        SELECT
+            pr.record_id,
+            pr.ticket_id,
+            v.plate_number,
+            ps.slot_number,
+            pr.entry_time
+        FROM parking_records pr
+        JOIN vehicles v
+            ON pr.vehicle_id = v.vehicle_id
+        JOIN parking_slots ps
+            ON pr.slot_id = ps.slot_id
+        WHERE pr.status = 'PARKED'
+        ORDER BY pr.entry_time ASC
+    """).fetchall()
+
+    db.close()
+
+    return vehicles
+
+
 def get_parking_record(identifier):
     """Find an active parking record using plate number or ticket ID."""
 
